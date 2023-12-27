@@ -1,0 +1,3 @@
+﻿<Project>
+  <Import Project="..\build\stEngage.props" />
+</Project>

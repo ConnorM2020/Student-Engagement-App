@@ -1,0 +1,12 @@
+# We don't need to bring the Go cache into the container.
+**/.cache
+**/.git
+**/.hg
+**/.svn
+**/.bzr
+
+# Exclude any logs.
+**/logs
+**/*.log
+
+# Exclude the binary that is built locally, in case you do that.

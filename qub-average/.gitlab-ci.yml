@@ -1,0 +1,18 @@
+stages:
+  - test
+
+variables:
+  GO111MODULE: "on"
+
+before_script:
+  - 'go version'
+
+test:
+  image: golang:1.18 
+  stage: test
+  script:
+    - go version
+    - go mod tidy
+    - go test -v ./...
+  only:
+    - main

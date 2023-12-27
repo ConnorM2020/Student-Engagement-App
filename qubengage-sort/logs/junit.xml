@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="SortTest" file="C:\Users\Connor Mallon\Documents\MENG CSC\Level 3\CSC3065 I Cloud\A2\qubengage-sort\src\SortTest.php" tests="1" assertions="1" errors="0" warnings="0" failures="0" skipped="0" time="0.007328">
+    <testcase name="testGetSortedAttendance" class="SortTest" classname="SortTest" file="C:\Users\Connor Mallon\Documents\MENG CSC\Level 3\CSC3065 I Cloud\A2\qubengage-sort\src\SortTest.php" line="8" assertions="1" time="0.007328"/>
+  </testsuite>
+</testsuites>

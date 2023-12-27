@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  monitoring-app:
+    build: .
+    ports:
+      - "5500:5500"
+    depends_on:
+      - engagement-score
+      - qub-avg
+      - maxmin
+      - sort
+      - failurerisk
+      - totalhours
+
+  engagement-score:
+    image: engagement-score-app
+    ports:
+      - "84:80"
+      
+  totalhours:
+    image: totalhours-app
+    ports:
+      - "83:80"
+
+  qub-avg:
+    image: avg-app
+    ports:
+      - "86:80"
+
+  maxmin:
+    image: maxmin-app
+    ports:
+      - "81:80"
+  
+  sort:
+    image: qubsort-app
+    ports:
+      - "82:80"
+
+  failurerisk:
+    image: risk-app
+    ports:
+      - "89:80"
+

@@ -1,0 +1,56 @@
+stages:
+  - restore
+  - build
+  - test
+
+variables:
+  ENGAGEMENTSCORE_DIR: "src/"
+  ENGAGEMENTSCORE_PROJECT_NAME: "stEngage"
+  ENGAGEMENTSCORE_TEST_DIR: "Tests/"
+  ENGAGEMENTSCORE_TEST_PROJECT_NAME: "testProject.Tests"
+
+image: mcr.microsoft.com/dotnet/sdk:6.0
+
+before_script:
+  - 'dotnet nuget locals all --clear'
+
+restore:
+  stage: restore
+  script:
+    - 'echo "Restoring packages for $ENGAGEMENTSCORE_PROJECT_NAME..."'
+    - 'dotnet restore $ENGAGEMENTSCORE_DIR$ENGAGEMENTSCORE_PROJECT_NAME.csproj --verbosity detailed'
+    - 'echo "Restoring packages for $ENGAGEMENTSCORE_TEST_PROJECT_NAME..."'
+    - 'dotnet restore $ENGAGEMENTSCORE_TEST_DIR$ENGAGEMENTSCORE_TEST_PROJECT_NAME.csproj --verbosity detailed'
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - .nuget/packages
+      - $ENGAGEMENTSCORE_DIR**/obj/
+      - $ENGAGEMENTSCORE_TEST_DIR**/obj/
+
+build:
+  stage: build
+  script:
+    - 'dotnet build $ENGAGEMENTSCORE_DIR$ENGAGEMENTSCORE_PROJECT_NAME.csproj --no-restore --configuration Release'
+  artifacts:
+    paths:
+      - $ENGAGEMENTSCORE_DIR/bin/Release/
+      - $ENGAGEMENTSCORE_TEST_DIR/bin/Release/
+    expire_in: 1 hour
+  only:
+    - main
+
+test:
+  stage: test
+  script:
+    - 'dotnet test $ENGAGEMENTSCORE_TEST_DIR$ENGAGEMENTSCORE_TEST_PROJECT_NAME.csproj --no-build --verbosity normal'
+  artifacts:
+    when: always
+    paths:
+      - $ENGAGEMENTSCORE_TEST_DIR/bin/Release/
+    reports:
+      junit:
+        - $ENGAGEMENTSCORE_TEST_DIR/TestResults/*.xml
+    expire_in: 1 hour
+  only:
+    - main

@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.2.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.2.0/firebase-firestore.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fetch/3.0.0/fetch.min.js"></script>
+
+<title>StudentEngagementMonitoring</title>
+<script type="text/javascript">
+
+// Part F - config data for the firebase 
+const firebaseConfig = {
+  apiKey: "AIzaSyAhfKbpI9-tfAwcPaz0YQIGm4SO6Jwtvsc",
+  authDomain: "csc3065-a2.firebaseapp.com",
+  projectId: "csc3065-a2",
+  storageBucket: "csc3065-a2.appspot.com",
+  messagingSenderId: "959619578762",
+  appId: "1:959619578762:web:da777424c29c572c3e2673",
+  measurementId: "G-SXR71YD5D6"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+function saveDataToFirebase() {
+    const studentId = document.getElementById('student-id').value;
+    console.log('Student ID'+studentId);
+    const data = {
+        attendance_1: document.getElementById('attendance_1').value,
+        attendance_2: document.getElementById('attendance_2').value,
+        attendance_3: document.getElementById('attendance_3').value,
+        attendance_4: document.getElementById('attendance_4').value,
+        index_1: document.getElementById('item_1').value,
+        index_2: document.getElementById('item_2').value,
+        index_3: document.getElementById('item_3').value,
+        index_4: document.getElementById('item_4').value,
+        cutoff:  document.getElementById('cut-off').value,
+    };
+    db.collection("data-storage").doc(studentId).set(data)
+    .then(() => {
+        console.log("Document successfully written!");
+    })
+    .catch((error) => {
+        console.error("Error writing document: ", error);
+    });
+}
+function getDataFromFirebase() {
+    const studentId = document.getElementById('student-id').value;
+
+    db.collection("data-storage").doc(studentId).get().then((doc) => {
+        if (doc.exists) {
+            const data = doc.data();
+            console.log("Document data:", data);
+            document.getElementById('attendance_1').value = data.attendance_1;
+            document.getElementById('attendance_2').value = data.attendance_2;
+            document.getElementById('attendance_3').value =  data.attendance_3;
+            document.getElementById('attendance_4').value = data.attendance_4;
+            document.getElementById('item_1').value = data.item_1;
+            document.getElementById('item_2').value = data.item_2;
+            document.getElementById('item_3').value = data.item_3;
+            document.getElementById('item_4').value = data.item_4;
+            document.getElementById('cut-off').value = data.cutoff;
+        } else {
+            // doc.data() will be undefined in this case
+            console.log("No such document!");
+        }
+    }).catch((error) => {
+        console.log("Error getting document:", error);
+    });
+}
+let lecTotal = 33;
+let labTotal = 22;
+let suppTotal = 44;
+let canTotal = 55;
+let globalEngagementScore = 0;
+
+// Question D - URL list and tryURL
+const maxMinURLS = [ 
+   // "http://localhost:5000/?port=81&",
+    "http://localhost:81/?"
+]
+const sortURLS = [
+   // "http://localhost:5000/?port=82&",
+    "http://localhost:82/?"
+]
+const totalURLS = [
+ //   "http://localhost:5000/?port=83&",
+    "http://localhost:83/?"
+]
+
+const engagementURLS = [
+  //   "http://localhost:5000/?port=84&",
+     "http://localhost:84/EngagementScore?",
+]
+const riskURLS = [
+  //  "http://localhost:5000/?port=89&",
+    "http://localhost:89/RiskAssessment?"
+]
+const avgURLS = [
+    "http://localhost:86/average?",
+    "http://localhost:5000/?port=86"
+]
+
+function tryURLs(urls, queryString, successCallback, errorCallback, index = 0) {
+    if (index >= urls.length) {
+        errorCallback('All services are currently unavailable.');
+        return;
+    }
+    let url = urls[index] + queryString;
+    let xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+        if (xhttp.readyState === 4) {
+            if (xhttp.status === 200) {
+                try {
+                    let response = JSON.parse(xhttp.responseText);
+                    if (!response.error) {
+                        successCallback(response);
+                    }
+                    else {  // for max min, sort function
+                        errorCallback(response.message);
+                    }
+                } catch (e) {
+                    // in the case it is a failure string - print the result.
+                    if (xhttp.responseText === "Low" || xhttp.responseText === "Moderate"
+                     || xhttp.responseText === "High") {
+                        var risk = xhttp.responseText;
+                        successCallback(risk);
+                    } else {
+                        errorCallback(xhttp.responseText);
+                    }
+                }
+            } else {
+                // If the status code is not 200, attempt to parse the error response
+                try {
+                    let errorResponse = JSON.parse(xhttp.responseText);
+                    errorCallback(errorResponse.message);
+                } catch (e) {
+                    errorCallback(xhttp.responseText);
+                }
+            }
+        }
+    };
+    xhttp.open("GET", url, true);
+    xhttp.send();
+}
+
+function displayTotal(response)
+{
+    document.getElementById('output-text').value = 'Total Attendance (in hours): ' + response.total + ' hours';
+}
+function displayMaxMin(max_attendance, min_attendance)
+{
+    document.getElementById('output-text').value = 'Maximum attendance: ' + max_attendance + ' hours'
+    + '\nMinimum attendance = ' + min_attendance + ' hours';
+}
+function displaySortedAttendance(sorted_attendance)
+{
+    document.getElementById('output-text').value = sorted_attendance;
+}
+function displayAverage(responseData) {
+    let averageValue = responseData.average;
+    if (!isNaN(averageValue)) {
+        document.getElementById('output-text').value = "Student Average: " + averageValue + " hours";
+    } else {
+        displayError("Unexpected response format for average.");
+    }
+}
+function displayEngagementScore(response) {
+    globalEngagementScore = response;
+    console.log(globalEngagementScore);
+    let score = parseFloat(response).toFixed(2);
+    document.getElementById('output-text').value = `Engagement Score: ${score}%`;
+}
+function displayRisk(riskValue) {
+    console.log('Risk: :', riskValue);
+    // Assuming riskValue is the actual value needed to be displayed
+    document.getElementById('output-text').value = 'Student Risk is: ' + riskValue;
+}
+function displayError(errorMessage) {
+    document.getElementById('output-text').value = errorMessage;
+}
+function clearText()
+{
+    document.getElementById('attendance_1').value = '';
+    document.getElementById('attendance_2').value = '';
+    document.getElementById('attendance_3').value = '';
+    document.getElementById('attendance_4').value = '';
+    document.getElementById('output-text').value = '';
+}
+
+function getMaxMin() {
+    // Retrieve the input values and validate them
+    let item_1 = document.getElementById('item_1').value;
+    let item_2 = document.getElementById('item_2').value;
+    let item_3 = document.getElementById('item_3').value;
+    let item_4 = document.getElementById('item_4').value;
+    let attendance_1 = document.getElementById('attendance_1').value;
+    let attendance_2 = document.getElementById('attendance_2').value;
+    let attendance_3 = document.getElementById('attendance_3').value;
+    let attendance_4 = document.getElementById('attendance_4').value;
+    
+    // Validation for attendance not to exceed total hours
+    if (attendance_1 > lecTotal || attendance_2 > labTotal || attendance_3 > suppTotal 
+                                                            || attendance_4 > canTotal) {
+        displayError("Input values cannot be higher than the total hours.");
+        return; // Stop execution if any value is too high
+    }
+    // Construct the query string with the input values
+    let queryString = "item_1=" + encodeURIComponent(item_1) + "&attendance_1=" 
+        + encodeURIComponent(attendance_1) + "&item_2=" + encodeURIComponent(item_2) + "&attendance_2=" 
+        + encodeURIComponent(attendance_2)+ "&item_3=" + encodeURIComponent(item_3) + "&attendance_3=" 
+        + encodeURIComponent(attendance_3) + "&item_4=" + encodeURIComponent(item_4) + "&attendance_4=" 
+        + encodeURIComponent(attendance_4);
+
+    tryURLs(maxMinURLS, queryString, 
+        response => {displayMaxMin(response.max_item, response.min_item); }, 
+        errorMessage => { displayError(errorMessage); }
+    );
+}
+function getSortedAttendance() {
+  let item_1 = document.getElementById('item_1').value
+  let item_2 = document.getElementById('item_2').value
+  let item_3 = document.getElementById('item_3').value
+  let item_4 = document.getElementById('item_4').value
+  let attendance_1 = document.getElementById('attendance_1').value
+  let attendance_2 = document.getElementById('attendance_2').value
+  let attendance_3 = document.getElementById('attendance_3').value
+  let attendance_4 = document.getElementById('attendance_4').value
+
+  if (attendance_1 > lecTotal || attendance_2 > labTotal || attendance_3 > suppTotal || attendance_4 > canTotal) {
+        displayError("Input values cannot be higher than the total hours.");
+        return; // Stop execution if any value is too high
+    }
+  let queryString = "item_1=" + encodeURIComponent(item_1) 
+                                                + "&attendance_1=" + encodeURIComponent(attendance_1)
+      + "&item_2=" + encodeURIComponent(item_2) + "&attendance_2=" + encodeURIComponent(attendance_2)
+      + "&item_3=" + encodeURIComponent(item_3) + "&attendance_3=" + encodeURIComponent(attendance_3)
+      + "&item_4=" + encodeURIComponent(item_4) + "&attendance_4=" + encodeURIComponent(attendance_4);
+    
+      tryURLs(sortURLS, queryString,
+        response => {
+            // Process the sorted attendance data
+            let sorted_attendance_returned = response.sorted_attendance;
+            let sorted_attendance = '';
+            for (let i = 0; i < sorted_attendance_returned.length; i++) {
+                sorted_attendance += sorted_attendance_returned[i]['item']
+                     + ' - ' + sorted_attendance_returned[i]['attendance'] + ' hours\n';
+            }
+            document.getElementById('output-text').value = sorted_attendance.trim();
+             // Display sorted attendance
+        },
+        errorMessage => { displayError(errorMessage); }
+    );
+}
+// working error handling + multiple URLS
+function getTotal() {
+    let item_1 = document.getElementById('item_1').value;
+    let item_2 = document.getElementById('item_2').value;
+    let item_3 = document.getElementById('item_3').value;
+    let item_4 = document.getElementById('item_4').value;
+
+    let attendance_1 = document.getElementById('attendance_1').value;
+    let attendance_2 = document.getElementById('attendance_2').value;
+    let attendance_3 = document.getElementById('attendance_3').value;
+    let attendance_4 = document.getElementById('attendance_4').value;
+
+   // document.getElementById('output-text').value = ''; // Clear previous messages
+    let queryString = "item_1=" + encodeURIComponent(item_1) + "&attendance_1="  + encodeURIComponent(attendance_1)
+                    + "&item_2=" + encodeURIComponent(item_2) + "&attendance_2=" + encodeURIComponent(attendance_2)
+                    + "&item_3=" + encodeURIComponent(item_3) + "&attendance_3=" + encodeURIComponent(attendance_3)
+                    + "&item_4=" + encodeURIComponent(item_4) + "&attendance_4=" + encodeURIComponent(attendance_4);
+
+
+    tryURLs(totalURLS, queryString, displayTotal, displayError);
+    console.log()
+}
+function getEngagementScore() {
+   // Actual attendance values from the input fields
+   let lecInput = document.getElementById('attendance_1').value.trim();
+    let labInput = document.getElementById('attendance_2').value.trim();
+    let suppInput = document.getElementById('attendance_3').value.trim();
+    let canInput = document.getElementById('attendance_4').value.trim();
+   // Check if any of the parsed numbers are NaN and set them to 0 if true
+   let lec, lab, supp, can;
+   let lecW = 0.3;
+   let labW = 0.4;
+   let suppW = 0.15;
+   let canW = 0.15;
+   if (lec > lecTotal || lab > labTotal || supp > suppTotal || can > canTotal) {
+       alert("Input values cannot be higher than the total hours.");
+       return; // Stop execution if any value is too high
+   }
+    // Attempt to parse the input values to floats
+    lec = parseFloat(lecInput);
+    lab = parseFloat(labInput);
+    supp = parseFloat(suppInput);
+    can = parseFloat(canInput);
+
+    // Set the values to an empty string if they are NaN
+    lec = isNaN(lec) ? '' : lec;
+    lab = isNaN(lab) ? '' : lab;
+    supp = isNaN(supp) ? '' : supp;
+    can = isNaN(can) ? '' : can;
+    // Use XMLHttpRequest to send the GET request
+    let queryString = `lec=${encodeURIComponent(lec)}&lecTotal=${encodeURIComponent(lecTotal)}`
+        + `&lab=${encodeURIComponent(lab)}&labTotal=${encodeURIComponent(labTotal)}`
+        + `&supp=${encodeURIComponent(supp)}&suppTotal=${encodeURIComponent(suppTotal)}`
+        + `&can=${encodeURIComponent(can)}&canTotal=${encodeURIComponent(canTotal)}`;
+    tryURLs(engagementURLS, queryString, displayEngagementScore, displayError);
+}
+
+function getRisk() {
+    let lecInput = document.getElementById('attendance_1').value.trim();
+    let labInput = document.getElementById('attendance_2').value.trim();
+    let suppInput = document.getElementById('attendance_3').value.trim();
+    let canInput = document.getElementById('attendance_4').value.trim();
+
+    let lec = lecInput ? parseFloat(lecInput) : '';
+    let lab = labInput ? parseFloat(labInput) : '';
+    let supp = suppInput ? parseFloat(suppInput) : '';
+    let can = canInput ? parseFloat(canInput) : '';
+    // Check if any of the values are NaN and replace with blank string
+    lec = isNaN(lec) ? '' : lec;
+    lab = isNaN(lab) ? '' : lab;
+    supp = isNaN(supp) ? '' : supp;
+    can = isNaN(can) ? '' : can;
+    // Check if the input values exceed the total hours
+    let cutoff = parseFloat(document.getElementById('cut-off').value);
+    cutoff = isNaN(cutoff) ? '' : cutoff;
+    let engagementQueryString = `lec=${lec}&lecTotal=${lecTotal}&lab=${lab}&labTotal=
+    ${labTotal}&supp=${supp}&suppTotal=${suppTotal}&can=${can}&canTotal=${canTotal}`;
+    // Handle the engagement score response
+    function handleEngagementScore(engagementScore) {
+        // Directly use the engagementScore value assuming it's already a number
+        console.log("Engagement score here: " + engagementScore);
+        if (isNaN(engagementScore)) {
+            displayError("Invalid engagement score received.");
+            return;
+        }
+        let riskQueryString = `engagementScore=${engagementScore}&cutoff=${cutoff}`;
+        tryURLs(riskURLS, riskQueryString, displayRisk, displayError);
+    }
+    // Start the process by trying to get the engagement score first
+    tryURLs(engagementURLS, engagementQueryString, handleEngagementScore, displayError);
+}
+
+ function getAverage() {
+    let lec = parseFloat(document.getElementById('attendance_1').value);
+    let lab = parseFloat(document.getElementById('attendance_2').value);
+    let supp = parseFloat(document.getElementById('attendance_3').value);
+    let can = parseFloat(document.getElementById('attendance_4').value);
+    lec = isNaN(lec) ? '' : lec;
+    lab = isNaN(lab) ? '' : lab;
+    supp = isNaN(supp) ? '' : supp;
+    can = isNaN(can) ? '' : can;
+    // Error handling for input values
+    let queryString = `lecture=${lec}&lab=${lab}&support=${supp}&canvas=${can}`;
+    tryURLs(avgURLS, queryString, displayAverage, displayError);
+}
+function getMonitoring() {
+    // Make sure to display the monitoring section and hide the main section
+    document.getElementById('monitor').style.display = 'block';
+    document.getElementById('sem').style.display = 'none';
+
+    const monitorUrl = 'http://localhost:5500/monitor';
+
+    fetch(monitorUrl)
+        .then(response => response.json())
+        .then(data => {
+            // Display the JSON data in the pre element
+            document.getElementById('json-output').textContent = JSON.stringify(data, null, 2);
+        })
+        .catch(error => {
+            // If there's an error, display it in the pre element
+            document.getElementById('json-output').textContent = 'Error fetching monitoring data: ' + error.message;
+        });
+}
+function goHome() {
+    document.getElementById('monitor').style.display = 'none';
+    document.getElementById('sem').style.display = 'block';
+    // Clear the monitoring output when going back to the main page
+    document.getElementById('json-output').textContent = '';
+}
+function goHome(){
+    document.getElementById('monitor').style.display = 'none';
+    document.getElementById('sem').style.display = 'block';
+}
+// let portnum = "/?port=86"
+</script>
+<style type="text/css">
+body  {
+    font-size: 150%;
+    font-family: monospace;
+}
+label {
+    display: inline-block;
+    width: 150px;
+    text-align: left;
+}
+#logo
+{
+    font-family: Calibri, sans-serif;
+    font-weight: lighter;
+    color: #505050;
+    margin: 0.5em;
+}
+#sem
+{
+    text-align: center;
+    margin-top: 1em;
+}
+#input-div-1
+{
+    text-align: center;
+    margin-top: 1em;
+    background-color:#d5d8dc  ;
+}
+#input-div-2
+{
+    text-align: center;
+    background-color:#abb2b9 ;
+}
+#output-div
+{
+    text-align: center;
+    background-color:#808b96 ;
+}
+.display-item {
+    font-size: 90%;
+    color: black;
+    font-family: monospace;
+    background-color: white;
+    padding: 0.2em;
+    margin: 0.2em;
+    letter-spacing: 0.1em;
+    width: 380px;
+    text-align: right;
+}
+
+.display-attendance{
+    font-size: 90%;
+    color: black;
+    background-color: white;
+    padding: 0.2em;
+    margin: 0.2em;
+    font-family: monospace;
+    letter-spacing: 0.1em;
+    width: 40px;
+}
+
+.display-output {
+    font-size: 90%;
+    color: black;
+    background-color:white ;
+    padding: 0.2em;
+    margin: 0.2em;
+    font-family: monospace;
+    letter-spacing: 0.1em;
+    width: 600px;
+
+}
+
+.sembutton-active {
+    background-color:   #2874a6  ;
+    color: white;
+    padding: 0px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 18px;
+    margin: 4px 2px;
+    cursor: pointer;
+    height: 50px;
+    width: 400px;
+}
+
+.sembutton-inactive {
+    background-color: gray;
+    color: white;
+    padding: 0px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 18px;
+    margin: 4px 2px;
+    cursor: pointer;
+    height: 50px;
+    width: 400px;
+}
+
+.sembutton-clear {
+    background-color:  #c0392b ;
+    color: white;
+    padding: 0px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 18px;
+    margin: 4px 2px;
+    cursor: pointer;
+    height: 40px;
+    width: 400px;
+}
+#monitor {
+    display: none;
+}
+</style>
+</head>
+<body>
+    <div id="monitor">
+        <h1>Monitoring and Metrics</h1>
+        <p>Monitoring Details</p>
+        <!-- Add the pre element to display the JSON data -->
+        <pre id="json-output"></pre>
+        <button onclick="goHome()">Back to Main Page</button>
+    </div>
+<div id="sem">
+    <div id="logo">
+        Student Engagement Monitoring
+    </div>
+    <div id="input-div-1">
+    <div>
+        <input class="display-item" type="text" id="item_1" name="item_1" value="Lecture sessions" readonly>
+        <input class="display-attendance"  type="text" id="attendance_1" name="attendance_1" placeholder="00"><label>/33 (hours)</label>
+    </div>
+    <div>
+        <input class="display-item" type="text" id="item_2" name="item_2" value="Lab sessions" readonly>
+        <input class="display-attendance"  type="text" id="attendance_2" name="attendance_2" placeholder="00"><label>/22 (hours)</label>
+    </div>
+    <div>
+        <input class="display-item" type="text" id="item_3" name="item_3" value="Support sessions" readonly>
+        <input class="display-attendance"  type="text" id="attendance_3" name="attendance_3" placeholder="00"><label>/44 (hours)</label>
+    </div>
+    <div>
+        <input class="display-item" type="text" id="item_4" name="item_4" value="Canvas activities" readonly>
+        <input class="display-attendance"  type="text" id="attendance_4" name="attendance_4" placeholder="00"><label>/55 (hours)</label>
+    </div>
+    </div>
+    <div id="input-div-2">
+        <label class="display-item" id="cutoff">Cut-off Engagement Score</label>
+        <input class="display-attendance"  type="text" id="cut-off" name="cut-off" placeholder="00"><label>/100 (%)</label>
+    </div>
+    <div id="output-div">
+        <div id="error-message"></div> 
+        <textarea class="display-output" id="output-text" rows="5" cols="35" readonly=1 placeholder="Results here..." value="">
+        </textarea>
+    </div>
+    <div>
+        <button class="sembutton-active" onclick="getMaxMin();">Maximum and Minimum Attendance</button>
+
+    </div>
+    <div>
+        <button class="sembutton-active" onclick="getSortedAttendance();">Sort Attendance</button>
+    </div>
+    <div>
+        <button class="sembutton-active" onclick="getTotal();">Total Attendance Hours</button>
+    </div>
+    <div>
+        <button class="sembutton-active" onclick="getEngagementScore();">Student Engagement Score</button>
+    </div>
+    <div>
+        <button class="sembutton-active" onclick="getRisk();">Risk of Student Failure</button>
+
+    </div>
+    <div>
+        <button class="sembutton-active" onclick="getAverage();">Student Average</button>
+
+    </div>
+    <div>
+        <button class="sembutton-active" onclick="getMonitoring();">Monitoring</button>
+
+    </div>
+
+    <div>
+        <button class="sembutton-active" onclick="saveDataToFirebase();">Save Data to Firebase</button>
+    </div>
+    <div>
+        <input type="text" id="student-id" placeholder="Enter Student ID">
+        <button onclick="getDataFromFirebase();">Retrieve Data</button>
+    </div>
+    
+    <div>
+        <button class="sembutton-clear" onclick="clearText();">Clear</button>
+    </div>
+
+</div>
+</body>
+
+<script type="text/javascript">
+</script>
+
+</html>

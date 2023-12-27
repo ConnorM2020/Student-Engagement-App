@@ -1,0 +1,22 @@
+image: node:16
+
+stages:
+  - install
+  - test
+
+cache:
+  paths:
+    - node_modules/
+    
+install_dependencies:
+  stage: install
+  script:
+    - npm install
+  cache:
+    paths:
+      - node_modules/
+
+tests:
+  stage: test
+  script:
+    - npm test
