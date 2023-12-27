@@ -76,29 +76,29 @@ let globalEngagementScore = 0;
 
 // Question D - URL list and tryURL
 const maxMinURLS = [ 
-   // "http://localhost:5000/?port=81&",
+    "http://localhost:5000/?port=81&",
     "http://localhost:81/?"
 ]
 const sortURLS = [
-   // "http://localhost:5000/?port=82&",
+    "http://localhost:5000/?port=82&",
     "http://localhost:82/?"
 ]
 const totalURLS = [
- //   "http://localhost:5000/?port=83&",
+    "http://localhost:5000/?port=83&",
     "http://localhost:83/?"
 ]
 
 const engagementURLS = [
-  //   "http://localhost:5000/?port=84&",
+     "http://localhost:5000/?port=84&",
      "http://localhost:84/EngagementScore?",
 ]
 const riskURLS = [
-  //  "http://localhost:5000/?port=89&",
+    "http://localhost:5000/?port=89&",
     "http://localhost:89/RiskAssessment?"
 ]
 const avgURLS = [
-    "http://localhost:86/average?",
-    "http://localhost:5000/?port=86"
+    "http://localhost:5000/?port=86",
+    "http://localhost:86/average?"
 ]
 
 function tryURLs(urls, queryString, successCallback, errorCallback, index = 0) {
@@ -568,7 +568,6 @@ label {
     </div>
     <div>
         <button class="sembutton-active" onclick="getMonitoring();">Monitoring</button>
-
     </div>
 
     <div>
@@ -578,7 +577,6 @@ label {
         <input type="text" id="student-id" placeholder="Enter Student ID">
         <button onclick="getDataFromFirebase();">Retrieve Data</button>
     </div>
-    
     <div>
         <button class="sembutton-clear" onclick="clearText();">Clear</button>
     </div>
